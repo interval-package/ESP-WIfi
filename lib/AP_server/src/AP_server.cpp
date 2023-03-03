@@ -1,5 +1,22 @@
 #include "AP_server.h"
 
+struct url_action url_patterns[] = {
+    {
+        .url = "GET /L",
+        .func = unlit_light,
+    },
+    {
+        .url = "GET /H",
+        .func = lit_light,
+    },
+    {
+        .url = "GET /Restart",
+        .func = url_nope,
+    },
+};
+
+#define URL_NUM (sizeof(url_patterns)/(sizeof(struct url_action)))
+
 AP_server::AP_server(int port){
   server = WiFiServer(80);
 }
@@ -40,6 +57,7 @@ void AP_server::tackle_conn(WiFiClient &client, HardwareSerial& _Serial){
             client.print("<h1>Zza simple wifi using esp32</h1>");
             client.print("Click <a href=\"/H\">here</a> to turn ON the LED.<br>");
             client.print("Click <a href=\"/L\">here</a> to turn OFF the LED.<br>");
+            client.print("Click <a href=\"/Restart\">here</a> to Restart the Server.<br>");
 
             // The HTTP response ends with another blank line:
             client.println();
@@ -53,11 +71,11 @@ void AP_server::tackle_conn(WiFiClient &client, HardwareSerial& _Serial){
         }
 
         // Check to see if the client request was "GET /H" or "GET /L":
-        if (currentLine.endsWith("GET /H")) {
-          digitalWrite(LED_BLUE, HIGH);               // GET /H turns the LED on
-        }
-        if (currentLine.endsWith("GET /L")) {
-          digitalWrite(LED_BLUE, LOW);                // GET /L turns the LED off
+        for (size_t i = 0; i < URL_NUM; i++)
+        {
+          if (currentLine.endsWith(url_patterns[i].url)) {
+            (*(url_patterns[i].func))(_Serial);
+          }
         }
       }
     }
@@ -89,3 +107,18 @@ void AP_server::init_server(WiFiServer &server, HardwareSerial& _Serial){
   Serial.println("Server started");
 }
 
+void lit_light(HardwareSerial& _Serial){
+    digitalWrite(LED_BLUE, HIGH);
+}
+
+void unlit_light(HardwareSerial& _Serial){
+    digitalWrite(LED_BLUE, LOW);
+}
+
+void url_nope(HardwareSerial& _Serial){
+}
+
+void register_func(int idx, const char * url, void (*func)(HardwareSerial& _Serial)){
+    url_patterns[idx].url = url;
+    url_patterns[idx].func = func;
+}

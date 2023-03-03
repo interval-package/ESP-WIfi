@@ -3,6 +3,7 @@
         "*.cjson": "jsonc",
         "*.wxss": "css",
         "*.wxs": "javascript",
-        "wifi.h": "c"
+        "wifi.h": "c",
+        "mutex": "cpp"
     }
 }

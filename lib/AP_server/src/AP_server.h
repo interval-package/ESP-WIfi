@@ -11,6 +11,8 @@ class AP_server{
     private:
         const char *ssid = "ESP32_TEST";
         const char *password = nullptr;
+
+
         // IPAddress local_IP(192,168,101,1);
         // IPAddress gateway_IP(192,168,137,1);
         // IPAddress subnet(255,255,255,0);
@@ -23,5 +25,15 @@ class AP_server{
         void static tackle_conn(WiFiClient &client, HardwareSerial& _Serial);
         void static init_server(WiFiServer &server, HardwareSerial& _Serial);
 };
+
+void lit_light(HardwareSerial& _Serial);
+void unlit_light(HardwareSerial& _Serial);
+void url_nope(HardwareSerial& _Serial);
+
+struct url_action{
+    const char* url;
+    void (*func)(HardwareSerial& _Serial);
+};
+void register_func(int idx, const char * url, void (*func)(HardwareSerial& _Serial));
 
 #endif
