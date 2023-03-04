@@ -9,19 +9,22 @@
 
 #include <AP_server.h>
 #include <STA_sniffer.h>
-// #include <beacon_faker.h>
+#include <beacon_faker.h>
 
 
 #ifndef LED_BLUE
 #define LED_BLUE 2
 #endif
 
-// AP_server m_server;
+AP_server m_server;
+// beacon_faker m_faker;
 STA_sniffer m_sniffer;
+
+char * fake_addr = "10:10:81:6e:1a:08";
 
 void m_sniff_out(void* buf, wifi_promiscuous_pkt_type_t type);
 void url_make_header(HardwareSerial& _Serial);
-
+void task_send_fake_beacon();
 
 void setup() {
   pinMode(LED_BLUE, OUTPUT);
@@ -32,13 +35,15 @@ void setup() {
   Serial.println();
   Serial.println("Testing...............");
 
-  // register_func(2, "Get /Restart", url_make_header);
-  // m_server = AP_server(80);
-  // m_server.init_server();
-
   delay(5000);
   lit_light(Serial);
-  m_sniffer.sniffer_setup(Serial, m_sniff_out);
+
+
+  // register_func(2, "Get /Restart", url_make_header);
+  m_server = AP_server(80);
+  m_server.init_server();
+
+  m_sniffer.sniffer_setup(Serial, sniff_out_parsed);
 
 }
 

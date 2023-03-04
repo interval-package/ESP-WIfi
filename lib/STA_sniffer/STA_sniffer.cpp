@@ -1,4 +1,5 @@
 #include "STA_sniffer.h"
+#include "sniffer_structs.h"
 
 uint32_t magic_num = 0xa1b2c3d4; //The default magic number. With this magic number, every packet needs timestamp in seconds and Microseconds.
 uint16_t version_major = 2; /* major version number */
@@ -16,10 +17,75 @@ boolean activate_hopping = true;
 
 HardwareSerial *mSerial;
 
+const char* _MAMG_SUBTYPES[] = {
+    "Association Request",
+    "Association Response",
+    "Reassociation Request",
+    "Reassociation Response",
+    "Probe Request",
+    "Probe Response",
+    "Timing Advertisement",
+    "Reserved",
+    "Beacon",
+    "ATIM",
+    "Disassociation",
+    "Authentication",
+    "Deauthentication",
+    "Action",
+    "Action No Ack (NACK)",
+    "Reserved"
+};
+
+const char* _CTRL_SUBTYPES[] = {
+    "Reserved",
+    "Trigger[3]",
+    "TACK",
+    "Beamforming Report Poll",
+    "VHT/HE NDP Announcement",
+    "Control Frame Extension",
+    "Control Wrapper",
+    "Block Ack Request (BAR)",
+    "Block Ack (BA)",
+    "PS-Poll",
+    "RTS",
+    "CTS",
+    "ACK",
+    "CF-End",
+    "CF-End + CF-ACK",
+};
+
+const char* _DATA_SUBTYPES[] = {
+    "Data",
+    "Reserved",
+    "Reserved",
+    "Reserved",
+    "Null (no data)",
+    "Reserved",
+    "Reserved",
+    "Reserved",
+    "QoS Data",
+    "QoS Data + CF-ACK",
+    "QoS Data + CF-Poll",
+    "QoS Data + CF-ACK + CF-Poll",
+    "QoS Null (no data)",
+    "Reserved",
+    "QoS CF-Poll (no data)",
+    "QoS CF-ACK + CF-Poll (no data)"
+};
+
+const char* _TYPES[] = {
+    "MAMG",
+    "CTRL",
+    "DATA",
+    "MISC"
+};
+
 void serialout_write(char * target, int len){
     mSerial->write(target, len);
 }
 
+//Initialize phase (setup PCAP file headers and ESP32 Wifi configuration)
+//PCAP file required headers and values (information in https://wiki.wireshark.org/Development/LibpcapFileFormat)
 void STA_sniffer::setupPCAP(){
     serialout_32bit(magic_num);
     serialout_16bit(version_major);
@@ -30,9 +96,24 @@ void STA_sniffer::setupPCAP(){
     serialout_32bit(network);
 }
 
-void STA_sniffer::sniffer_setup(HardwareSerial& _Serial, wifi_promiscuous_cb_t cb) {
-    mSerial = &_Serial;
+void STA_sniffer::set_filter(){
+    // 设置过滤，自己设计
+    wifi_promiscuous_filter_t base_filter, ctr_filter;
 
+
+    base_filter.filter_mask = 
+    WIFI_PROMIS_FILTER_MASK_ALL;
+
+    esp_wifi_set_promiscuous_filter(&base_filter);
+
+
+    ctr_filter.filter_mask = 
+    WIFI_PROMIS_CTRL_FILTER_MASK_ALL;
+
+    esp_wifi_set_promiscuous_ctrl_filter(&ctr_filter);
+};
+
+void STA_sniffer::sniffer_start_wifi(){
     //store serial buffer before flushing
     nvs_flash_init();
     /**
@@ -47,15 +128,13 @@ void STA_sniffer::sniffer_setup(HardwareSerial& _Serial, wifi_promiscuous_cb_t c
     ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));  
     ESP_ERROR_CHECK(esp_wifi_start());
+}
 
-    wifi_promiscuous_filter_t base_filter, ctr_filter;
-    base_filter.filter_mask = WIFI_PROMIS_FILTER_MASK_CTRL;
-    // esp_wifi_get_promiscuous_filter(&base_filter);
-    esp_wifi_set_promiscuous_filter(&base_filter);
-    ctr_filter.filter_mask = WIFI_PROMIS_CTRL_FILTER_MASK_ACK;
-    // esp_wifi_get_promiscuous_ctrl_filter(&ctr_filter);
-    esp_wifi_set_promiscuous_ctrl_filter(&ctr_filter);
+void STA_sniffer::sniffer_setup(HardwareSerial& _Serial, wifi_promiscuous_cb_t cb) {
+    mSerial = &_Serial;
 
+    sniffer_start_wifi();
+    set_filter();
 
     // 开始记录数据
     _Serial.println();
@@ -71,7 +150,7 @@ void STA_sniffer::sniffer_setup(HardwareSerial& _Serial, wifi_promiscuous_cb_t c
 
     //Set primary and secondary channel(not used)
     wifi_second_chan_t secondchannel = (wifi_second_chan_t)NULL;
-    esp_wifi_set_channel(channel,secondchannel);
+    esp_wifi_set_channel(channel, secondchannel);
 }
 
 //This function runs if channel hopping is enabled during initialization
@@ -92,9 +171,6 @@ void STA_sniffer::sniffer_loop() {
 
 }
 
-//Main Functions that run continuously:
-
-
 //Callback method to capture promiscuous packets
 void sniff_out(void* buf, wifi_promiscuous_pkt_type_t type){
     //received packet
@@ -114,6 +190,73 @@ void sniff_out(void* buf, wifi_promiscuous_pkt_type_t type){
     serialPacket(time_sec, time_usec, header.sig_len, pak->payload);
 }
 
+
+void make_addr(uint8_t* addr, char *ans){
+    for (size_t i = 0; i < 6; i++)
+    {
+        if(!i){
+            sprintf(ans, "%02x", addr[i]);
+        }else{
+            sprintf(ans+i*3-1, ":%02x", addr[i]);
+        }
+    }
+    ans[18] = '\0';
+}
+bool addr_cmp(uint8_t* addr1, uint8_t* addr2){
+    for (size_t i = 0; i < 6; i++)
+    {
+        if(addr1[i] != addr2[1]) return false;
+    }
+    return true;
+}
+
+void sniff_out_parsed(void* buf, wifi_promiscuous_pkt_type_t type){
+    char _buffer[256];
+    // 很无语，都是一样的包，还多一个type
+    //received packet
+    wifi_promiscuous_pkt_t* prom_pak = (wifi_promiscuous_pkt_t*) buf;
+
+    //received control header (extract from received packet):
+    wifi_pkt_rx_ctrl_t header = (wifi_pkt_rx_ctrl_t)prom_pak->rx_ctrl;
+    // 读取WiFi mac首部
+    wifi_captured_packet_t* mac_pak = (wifi_captured_packet_t*)prom_pak->payload;
+
+    uint8_t type_info = (mac_pak->hdr.frame_ctrl >> 2) & 0x00000003;
+    uint8_t subtype_info = (mac_pak->hdr.frame_ctrl >> 4) & 0x0000000f;
+
+    mSerial->printf("%s\t", _TYPES[type_info]);
+
+    switch (type_info){
+    case TYPE_MAMG:
+        mSerial->printf("%s", _MAMG_SUBTYPES[subtype_info]);
+        break;
+    case TYPE_CTRL:
+        mSerial->printf("%s", _CTRL_SUBTYPES[subtype_info]);
+        break;
+    case TYPE_DATA:
+        mSerial->printf("%s", _DATA_SUBTYPES[subtype_info]);
+        break;
+    case TYPE_MISC:
+        mSerial->printf("MISC");
+        break;
+    default:
+        mSerial->printf("ERR");
+        break;
+    }
+
+    mSerial->printf("\n");
+    // general
+    mSerial->printf("%d,", header.timestamp);
+    mSerial->printf("%d,", header.sig_len);
+
+    make_addr(mac_pak->hdr.addr1, _buffer);
+    mSerial->printf("%s,", _buffer);
+    make_addr(mac_pak->hdr.addr2, _buffer);
+    mSerial->printf("%s,", _buffer);
+    make_addr(mac_pak->hdr.addr3, _buffer);
+    mSerial->printf("%s\n", _buffer);
+}
+
 //Parser method to send PCAP formated packets to serial port. (PCAP needs timestamps in sec, microsec, payload length and payload).
 void serialPacket(uint32_t time_sec, uint32_t time_usec, uint32_t len, uint8_t* payload_buf){
 
@@ -131,6 +274,7 @@ void serialPacket(uint32_t time_sec, uint32_t time_usec, uint32_t len, uint8_t* 
     serialout_32bit(incl_len);
     serialout_32bit(orig_len);
     mSerial->write(payload_buf, incl_len);
+    mSerial->println();
 }
 
 //convert 32 bit input to 4 bytes output to serial port
