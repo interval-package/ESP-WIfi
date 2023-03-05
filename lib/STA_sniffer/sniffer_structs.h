@@ -6,6 +6,16 @@
 #define TYPE_DATA 2
 #define TYPE_MISC 3
 
+#define SUBTYPE_MGMT_BEACON 0X1000
+// #define SUBTYPE_MGMT_
+
+#define SUBTYPE_CTRL_ACK 0X1101
+// #define SUBTYPE_CTRL_
+
+#define SUBTYPE_DATA_DATA 0X0000
+#define SUBTYPE_DATA_NULL 0X0100
+
+
 //The MAC header structure we will use. It is in the same format as in IEEE. Some data types are in bits others are in bytes 
 //so that we can take any piece of the 6 bytes and display in HEX (mainly the addresses).
 //Wireshark implementation does not need this seperately, this is only for testing out the serial monitor (shown in previous project reports).

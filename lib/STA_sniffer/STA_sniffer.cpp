@@ -1,5 +1,4 @@
 #include "STA_sniffer.h"
-#include "sniffer_structs.h"
 
 uint32_t magic_num = 0xa1b2c3d4; //The default magic number. With this magic number, every packet needs timestamp in seconds and Microseconds.
 uint16_t version_major = 2; /* major version number */
@@ -180,21 +179,11 @@ void sniff_out(void* buf, wifi_promiscuous_pkt_type_t type){
     serialPacket(time_sec, time_usec, header.sig_len, pak->payload);
 }
 
-void sniff_out_parsed(void* buf, wifi_promiscuous_pkt_type_t type){
+void sniff_disp_base_info(uint8_t type_info, uint8_t subtype_info, wifi_pkt_rx_ctrl_t header, wifi_captured_packet_t* mac_pak){
     char _buffer[256];
-    // 很无语，都是一样的包，还多一个type
-    //received packet
-    wifi_promiscuous_pkt_t* prom_pak = (wifi_promiscuous_pkt_t*) buf;
 
-    //received control header (extract from received packet):
-    wifi_pkt_rx_ctrl_t header = (wifi_pkt_rx_ctrl_t)prom_pak->rx_ctrl;
-    // 读取WiFi mac首部
-    wifi_captured_packet_t* mac_pak = (wifi_captured_packet_t*)prom_pak->payload;
-
-
-
-    uint8_t type_info = (mac_pak->hdr.frame_ctrl >> 2) & 0x00000003;
-    uint8_t subtype_info = (mac_pak->hdr.frame_ctrl >> 4) & 0x0000000f;
+    uint32_t time_sec = now(); //current timestamp 
+    uint32_t time_usec = (unsigned int)(micros() - millis() * 1000);
 
     mSerial->printf("%s\t", _TYPES[type_info]);
 
@@ -218,6 +207,10 @@ void sniff_out_parsed(void* buf, wifi_promiscuous_pkt_type_t type){
 
     mSerial->printf("\n");
     // general
+    
+    mSerial->printf("%d,", time_sec);
+    mSerial->printf("%d,\t", time_usec);
+
     mSerial->printf("%d,", header.timestamp);
     mSerial->printf("%d,", header.sig_len);
 
@@ -229,6 +222,85 @@ void sniff_out_parsed(void* buf, wifi_promiscuous_pkt_type_t type){
     mSerial->printf("%s\n", _buffer);
 }
 
+void sniff_out_parsed(void* buf, wifi_promiscuous_pkt_type_t type){
+    
+    // 很无语，都是一样的包，还多一个type
+    //received packet
+    wifi_promiscuous_pkt_t* prom_pak = (wifi_promiscuous_pkt_t*) buf;
+
+    //received control header (extract from received packet):
+    wifi_pkt_rx_ctrl_t header = (wifi_pkt_rx_ctrl_t)prom_pak->rx_ctrl;
+    // 读取WiFi mac首部
+    wifi_captured_packet_t* mac_pak = (wifi_captured_packet_t*)prom_pak->payload;
+
+    uint8_t type_info = (mac_pak->hdr.frame_ctrl >> 2) & 0x00000003;
+    uint8_t subtype_info = (mac_pak->hdr.frame_ctrl >> 4) & 0x0000000f;
+
+    sniff_disp_base_info(type_info, subtype_info, header, mac_pak);
+}
+
+
+uint8_t _ph2_target_mac[6] = {0xaa, 0xaa, 0xbb, 0xbb, 0xcc, 0xcc};
+void sniff_out_ph2_getAddr(void* buf, wifi_promiscuous_pkt_type_t type){
+    char _buffer[256];
+    wifi_promiscuous_pkt_t* prom_pak = (wifi_promiscuous_pkt_t*) buf;
+    wifi_pkt_rx_ctrl_t header = (wifi_pkt_rx_ctrl_t)prom_pak->rx_ctrl;
+    wifi_captured_packet_t* mac_pak = (wifi_captured_packet_t*)prom_pak->payload;
+    uint8_t type_info = (mac_pak->hdr.frame_ctrl >> 2) & 0x00000003;
+    uint8_t subtype_info = (mac_pak->hdr.frame_ctrl >> 4) & 0x0000000f;
+
+    if(addr_cmp(_ph2_target_mac, mac_pak->hdr.addr1)){
+        sniff_disp_base_info(type_info, subtype_info, header, mac_pak);
+    }else{
+        // mSerial->print("not fit\t");
+
+        // mSerial->printf("%s\t", _TYPES[type_info]);
+
+        // switch (type_info){
+        // case TYPE_MGMT:
+        //     mSerial->printf("%s", _MGMT_SUBTYPES[subtype_info]);
+        //     break;
+        // case TYPE_CTRL:
+        //     mSerial->printf("%s", _CTRL_SUBTYPES[subtype_info]);
+        //     break;
+        // case TYPE_DATA:
+        //     mSerial->printf("%s", _DATA_SUBTYPES[subtype_info]);
+        //     break;
+        // case TYPE_MISC:
+        //     mSerial->printf("MISC");
+        //     break;
+        // default:
+        //     mSerial->printf("ERR");
+        //     break;
+        // }
+
+        // make_addr(mac_pak->hdr.addr1, _buffer);
+        // mSerial->printf("%s,", _buffer);
+        // make_addr(mac_pak->hdr.addr2, _buffer);
+        // mSerial->printf("%s,", _buffer);
+        // make_addr(mac_pak->hdr.addr3, _buffer);
+        // mSerial->printf("%s\n", _buffer);
+    }
+}
+
+uint8_t _ph3_target_mac[6] = {0xaa, 0xaa, 0xbb, 0xbb, 0xcc, 0xcc};
+uint8_t _ph3_atk_mac[6] = {0xaa, 0xaa, 0xbb, 0xbb, 0xcc, 0xcc};
+void sniff_out_ph3_getTof(void* buf, wifi_promiscuous_pkt_type_t type){
+    wifi_promiscuous_pkt_t* prom_pak = (wifi_promiscuous_pkt_t*) buf;
+    wifi_pkt_rx_ctrl_t header = (wifi_pkt_rx_ctrl_t)prom_pak->rx_ctrl;
+    wifi_captured_packet_t* mac_pak = (wifi_captured_packet_t*)prom_pak->payload;
+    uint8_t type_info = (mac_pak->hdr.frame_ctrl >> 2) & 0x00000003;
+    uint8_t subtype_info = (mac_pak->hdr.frame_ctrl >> 4) & 0x0000000f;
+    if(addr_cmp(_ph3_atk_mac, mac_pak->hdr.addr1)){
+        // 如果目标地址是我们的的攻击者，则是受害者
+        mSerial->println("\nVictim");
+        sniff_disp_base_info(type_info, subtype_info, header, mac_pak);
+    }else if(addr_cmp(_ph3_atk_mac, mac_pak->hdr.addr2)){
+        // 如果源地址是我们的攻击者，那么这个包来自攻击者
+        mSerial->println("\nAttack");
+        sniff_disp_base_info(type_info, subtype_info, header, mac_pak);
+    }
+}
 
 /* util functions */
 
@@ -247,7 +319,7 @@ void make_addr(uint8_t* addr, char *ans){
 bool addr_cmp(uint8_t* addr1, uint8_t* addr2){
     for (size_t i = 0; i < 6; i++)
     {
-        if(addr1[i] != addr2[1]) return false;
+        if(addr1[i] != addr2[i]) return false;
     }
     return true;
 }

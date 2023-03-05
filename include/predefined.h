@@ -52,24 +52,25 @@ void setup_m_sniffer(STA_sniffer& m_sniffer){
     uint32_t ft_base, ft_ctrl;
     ft_base = WIFI_PROMIS_FILTER_MASK_DATA|WIFI_PROMIS_FILTER_MASK_CTRL;
     ft_ctrl = WIFI_PROMIS_CTRL_FILTER_MASK_ACK;
-    m_sniffer.set_filter(ft_base, ft_ctrl);
     m_sniffer.sniffer_setup(Serial, sniff_out_parsed);
+    m_sniffer.set_filter(ft_base, ft_ctrl);
 }
+
 
 void setup_m_sniffer_ph2_getAddr(STA_sniffer& m_sniffer){
     uint32_t ft_base, ft_ctrl;
-    ft_base = WIFI_PROMIS_FILTER_MASK_DATA;
+    ft_base = WIFI_PROMIS_FILTER_MASK_DATA|WIFI_PROMIS_FILTER_MASK_CTRL;
     ft_ctrl = WIFI_PROMIS_CTRL_FILTER_MASK_ACK;
+    m_sniffer.sniffer_setup(Serial, sniff_out_ph2_getAddr);
     m_sniffer.set_filter(ft_base, ft_ctrl);
-    m_sniffer.sniffer_setup(Serial, sniff_out_parsed);
 };
 
 void setup_m_sniffer_ph3_getTof(STA_sniffer& m_sniffer){
     uint32_t ft_base, ft_ctrl;
     ft_base = WIFI_PROMIS_FILTER_MASK_DATA|WIFI_PROMIS_FILTER_MASK_CTRL;
     ft_ctrl = WIFI_PROMIS_CTRL_FILTER_MASK_ACK;
-    m_sniffer.set_filter(ft_base, ft_ctrl);
     m_sniffer.sniffer_setup(Serial, sniff_out_parsed);
+    m_sniffer.set_filter(ft_base, ft_ctrl);
 };
 
 void setup_m_server(AP_server& m_server){
@@ -82,7 +83,9 @@ void setup_m_faker(beacon_faker& m_faker){
 
 }
 
+void setup_m_faker(beacon_faker& m_faker){
 
+}
 
 
 #endif

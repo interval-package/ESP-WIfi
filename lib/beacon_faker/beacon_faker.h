@@ -23,8 +23,13 @@ class beacon_faker{
         uint8_t _BSSID[6];
         uint8_t _TIM_bit_map[2];
 
+        HardwareSerial* mSerial;
+
     public:
-        static void send_basic_beacon(HardwareSerial &_Serial);
+        void set_faker_srcAddr();
+        void send_basic_beacon();
+        void send_imitate_beacon(uint8_t source_addr[6], uint8_t *TIM_bit_map, int map_len);
+        void attack_target_null(uint8_t mmac[6]);
 };
 
 struct beacon_TIM_template{
@@ -41,6 +46,25 @@ struct beacon_TIM_template{
     uint8_t bitmap[251]={0xff};
     // ...partial_virtual_bitmap
 };
+
+//The MAC header structure we will use. It is in the same format as in IEEE. Some data types are in bits others are in bytes 
+//so that we can take any piece of the 6 bytes and display in HEX (mainly the addresses).
+//Wireshark implementation does not need this seperately, this is only for testing out the serial monitor (shown in previous project reports).
+// typedef struct {
+//     unsigned frame_ctrl:16;
+//     unsigned duration_id:16;
+//     uint8_t addr1[6]; /* receiver mac address */
+//     uint8_t addr2[6]; /* original sender mac address */
+//     uint8_t addr3[6]; /* BSSID */
+//     unsigned sequence_ctrl:16;
+// } wifi_packet_mac_hdr_t;
+
+// //Data Frame/Packet struct to split captured packet into mac header and payload.
+// typedef struct {
+//     wifi_packet_mac_hdr_t hdr;
+//     uint8_t payload[0];
+// } wifi_captured_packet_t;
+
 
 struct mac_header_template{
     uint8_t Frame_Ctrl[2] = {0x80, 0x00};
