@@ -35,30 +35,11 @@ void make_addr(uint8_t* addr, char *ans);
 
 bool addr_cmp(uint8_t* addr1, uint8_t* addr2);
 
-//The MAC header structure we will use. It is in the same format as in IEEE. Some data types are in bits others are in bytes 
-//so that we can take any piece of the 6 bytes and display in HEX (mainly the addresses).
-//Wireshark implementation does not need this seperately, this is only for testing out the serial monitor (shown in previous project reports).
-typedef struct {
-    unsigned frame_ctrl:16;
-    unsigned duration_id:16;
-    uint8_t addr1[6]; /* receiver mac address */
-    uint8_t addr2[6]; /* original sender mac address */
-    uint8_t addr3[6]; /* BSSID */
-    unsigned sequence_ctrl:16;
-} wifi_packet_mac_hdr_t;
-
-//Data Frame/Packet struct to split captured packet into mac header and payload.
-typedef struct {
-    wifi_packet_mac_hdr_t hdr;
-    uint8_t payload[0];
-} wifi_captured_packet_t;
-
-
-/* two sniffing funcs */
 //Callback method to capture promiscuous packets
 void sniff_out(void* buf, wifi_promiscuous_pkt_type_t type);
 void sniff_out_parsed(void* buf, wifi_promiscuous_pkt_type_t type);
-
+void sniff_out_ph2_getAddr(void* buf, wifi_promiscuous_pkt_type_t type);
+void sniff_out_ph3_getTof(void* buf, wifi_promiscuous_pkt_type_t type);
 
 class STA_sniffer{
     public:
@@ -78,7 +59,7 @@ class STA_sniffer{
 
     public:
         void setupPCAP();
-        void set_filter();
+        void set_filter(uint32_t base_flag, uint32_t ctr_flag);
         void sniffer_start_wifi();
         void sniffer_setup(HardwareSerial& _Serial, wifi_promiscuous_cb_t cb);
 

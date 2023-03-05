@@ -17,7 +17,14 @@ boolean activate_hopping = true;
 
 HardwareSerial *mSerial;
 
-const char* _MAMG_SUBTYPES[] = {
+const char* _TYPES[] = {
+    "MGMT",
+    "CTRL",
+    "DATA",
+    "MISC"
+};
+
+const char* _MGMT_SUBTYPES[] = {
     "Association Request",
     "Association Response",
     "Reassociation Request",
@@ -32,7 +39,7 @@ const char* _MAMG_SUBTYPES[] = {
     "Authentication",
     "Deauthentication",
     "Action",
-    "Action No Ack (NACK)",
+    "Action No Ack",
     "Reserved"
 };
 
@@ -73,17 +80,6 @@ const char* _DATA_SUBTYPES[] = {
     "QoS CF-ACK + CF-Poll (no data)"
 };
 
-const char* _TYPES[] = {
-    "MAMG",
-    "CTRL",
-    "DATA",
-    "MISC"
-};
-
-void serialout_write(char * target, int len){
-    mSerial->write(target, len);
-}
-
 //Initialize phase (setup PCAP file headers and ESP32 Wifi configuration)
 //PCAP file required headers and values (information in https://wiki.wireshark.org/Development/LibpcapFileFormat)
 void STA_sniffer::setupPCAP(){
@@ -96,20 +92,14 @@ void STA_sniffer::setupPCAP(){
     serialout_32bit(network);
 }
 
-void STA_sniffer::set_filter(){
+void STA_sniffer::set_filter(uint32_t base_flag, uint32_t ctr_flag){
     // 设置过滤，自己设计
     wifi_promiscuous_filter_t base_filter, ctr_filter;
 
-
-    base_filter.filter_mask = 
-    WIFI_PROMIS_FILTER_MASK_ALL;
-
+    base_filter.filter_mask = base_flag;
     esp_wifi_set_promiscuous_filter(&base_filter);
 
-
-    ctr_filter.filter_mask = 
-    WIFI_PROMIS_CTRL_FILTER_MASK_ALL;
-
+    ctr_filter.filter_mask = ctr_flag;
     esp_wifi_set_promiscuous_ctrl_filter(&ctr_filter);
 };
 
@@ -132,10 +122,7 @@ void STA_sniffer::sniffer_start_wifi(){
 
 void STA_sniffer::sniffer_setup(HardwareSerial& _Serial, wifi_promiscuous_cb_t cb) {
     mSerial = &_Serial;
-
     sniffer_start_wifi();
-    set_filter();
-
     // 开始记录数据
     _Serial.println();
     _Serial.println("<<START>>"); 
@@ -171,6 +158,9 @@ void STA_sniffer::sniffer_loop() {
 
 }
 
+
+/* register sniff functions */
+
 //Callback method to capture promiscuous packets
 void sniff_out(void* buf, wifi_promiscuous_pkt_type_t type){
     //received packet
@@ -190,26 +180,6 @@ void sniff_out(void* buf, wifi_promiscuous_pkt_type_t type){
     serialPacket(time_sec, time_usec, header.sig_len, pak->payload);
 }
 
-
-void make_addr(uint8_t* addr, char *ans){
-    for (size_t i = 0; i < 6; i++)
-    {
-        if(!i){
-            sprintf(ans, "%02x", addr[i]);
-        }else{
-            sprintf(ans+i*3-1, ":%02x", addr[i]);
-        }
-    }
-    ans[18] = '\0';
-}
-bool addr_cmp(uint8_t* addr1, uint8_t* addr2){
-    for (size_t i = 0; i < 6; i++)
-    {
-        if(addr1[i] != addr2[1]) return false;
-    }
-    return true;
-}
-
 void sniff_out_parsed(void* buf, wifi_promiscuous_pkt_type_t type){
     char _buffer[256];
     // 很无语，都是一样的包，还多一个type
@@ -221,14 +191,16 @@ void sniff_out_parsed(void* buf, wifi_promiscuous_pkt_type_t type){
     // 读取WiFi mac首部
     wifi_captured_packet_t* mac_pak = (wifi_captured_packet_t*)prom_pak->payload;
 
+
+
     uint8_t type_info = (mac_pak->hdr.frame_ctrl >> 2) & 0x00000003;
     uint8_t subtype_info = (mac_pak->hdr.frame_ctrl >> 4) & 0x0000000f;
 
     mSerial->printf("%s\t", _TYPES[type_info]);
 
     switch (type_info){
-    case TYPE_MAMG:
-        mSerial->printf("%s", _MAMG_SUBTYPES[subtype_info]);
+    case TYPE_MGMT:
+        mSerial->printf("%s", _MGMT_SUBTYPES[subtype_info]);
         break;
     case TYPE_CTRL:
         mSerial->printf("%s", _CTRL_SUBTYPES[subtype_info]);
@@ -255,6 +227,33 @@ void sniff_out_parsed(void* buf, wifi_promiscuous_pkt_type_t type){
     mSerial->printf("%s,", _buffer);
     make_addr(mac_pak->hdr.addr3, _buffer);
     mSerial->printf("%s\n", _buffer);
+}
+
+
+/* util functions */
+
+void make_addr(uint8_t* addr, char *ans){
+    for (size_t i = 0; i < 6; i++)
+    {
+        if(!i){
+            sprintf(ans, "%02x", addr[i]);
+        }else{
+            sprintf(ans+i*3-1, ":%02x", addr[i]);
+        }
+    }
+    ans[18] = '\0';
+}
+
+bool addr_cmp(uint8_t* addr1, uint8_t* addr2){
+    for (size_t i = 0; i < 6; i++)
+    {
+        if(addr1[i] != addr2[1]) return false;
+    }
+    return true;
+}
+
+void serialout_write(char * target, int len){
+    mSerial->write(target, len);
 }
 
 //Parser method to send PCAP formated packets to serial port. (PCAP needs timestamps in sec, microsec, payload length and payload).
