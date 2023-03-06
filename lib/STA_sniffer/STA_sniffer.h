@@ -38,12 +38,13 @@ void make_addr(uint8_t* addr, char *ans);
 bool addr_cmp(uint8_t* addr1, uint8_t* addr2);
 
 void sniff_disp_base_info(uint8_t type_info, uint8_t subtype_info, wifi_pkt_rx_ctrl_t header, wifi_captured_packet_t* mac_pak);
-
+void sniff_disp_base_info_ack(uint8_t type_info, uint8_t subtype_info, wifi_pkt_rx_ctrl_t header, wifi_captured_packet_t* mac_pak);
 
 //Callback method to capture promiscuous packets
 void sniff_out(void* buf, wifi_promiscuous_pkt_type_t type);
 void sniff_out_parsed(void* buf, wifi_promiscuous_pkt_type_t type);
 void sniff_out_ph2_getAddr(void* buf, wifi_promiscuous_pkt_type_t type);
+void set_ph2_tar(uint8_t mac[6]);
 void sniff_out_ph3_getTof(void* buf, wifi_promiscuous_pkt_type_t type);
 
 class STA_sniffer{

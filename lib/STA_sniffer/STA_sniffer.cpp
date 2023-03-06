@@ -44,6 +44,7 @@ const char* _MGMT_SUBTYPES[] = {
 
 const char* _CTRL_SUBTYPES[] = {
     "Reserved",
+    "Reserved",
     "Trigger[3]",
     "TACK",
     "Beamforming Report Poll",
@@ -131,7 +132,7 @@ void STA_sniffer::sniffer_setup(HardwareSerial& _Serial, wifi_promiscuous_cb_t c
     esp_wifi_set_promiscuous(true);
 
     // 这个函数是最重要的，监听到所有的包之后，就会调用cb这个函数，我们的接收就是要依靠这个函数
-    //CSI function
+    // CSI function
     esp_wifi_set_promiscuous_rx_cb(cb);
 
     //Set primary and secondary channel(not used)
@@ -185,7 +186,7 @@ void sniff_disp_base_info(uint8_t type_info, uint8_t subtype_info, wifi_pkt_rx_c
     uint32_t time_sec = now(); //current timestamp 
     uint32_t time_usec = (unsigned int)(micros() - millis() * 1000);
 
-    mSerial->printf("%s\t", _TYPES[type_info]);
+    mSerial->printf("%s,", _TYPES[type_info]);
 
     switch (type_info){
     case TYPE_MGMT:
@@ -204,12 +205,10 @@ void sniff_disp_base_info(uint8_t type_info, uint8_t subtype_info, wifi_pkt_rx_c
         mSerial->printf("ERR");
         break;
     }
-
-    mSerial->printf("\n");
     // general
     
-    mSerial->printf("%d,", time_sec);
-    mSerial->printf("%d,\t", time_usec);
+    mSerial->printf(",%d,", time_sec);
+    mSerial->printf("%d,", time_usec);
 
     mSerial->printf("%d,", header.timestamp);
     mSerial->printf("%d,", header.sig_len);
@@ -220,6 +219,47 @@ void sniff_disp_base_info(uint8_t type_info, uint8_t subtype_info, wifi_pkt_rx_c
     mSerial->printf("%s,", _buffer);
     make_addr(mac_pak->hdr.addr3, _buffer);
     mSerial->printf("%s\n", _buffer);
+}
+
+void sniff_disp_base_info_ack(uint8_t type_info, uint8_t subtype_info, wifi_pkt_rx_ctrl_t header, wifi_captured_packet_t* mac_pak){
+        char _buffer[256];
+
+    uint32_t time_sec = now(); //current timestamp 
+    uint32_t time_usec = (unsigned int)(micros() - millis() * 1000);
+
+    // mSerial->printf("%s\t", _TYPES[type_info]);
+
+    switch (type_info){
+    case TYPE_MGMT:
+        mSerial->printf("%s", _MGMT_SUBTYPES[subtype_info]);
+        break;
+    case TYPE_CTRL:
+        mSerial->printf("%s", _CTRL_SUBTYPES[subtype_info]);
+        break;
+    case TYPE_DATA:
+        mSerial->printf("%s", _DATA_SUBTYPES[subtype_info]);
+        break;
+    case TYPE_MISC:
+        mSerial->printf("MISC");
+        break;
+    default:
+        mSerial->printf("ERR");
+        break;
+    }
+    // general
+    
+    mSerial->printf(",%d,", time_sec);
+    mSerial->printf("%d,", time_usec);
+
+    mSerial->printf("%d,", header.timestamp);
+    mSerial->printf("%d,", header.sig_len);
+
+    make_addr(mac_pak->hdr.addr1, _buffer);
+    mSerial->printf("%s\n", _buffer);
+    // make_addr(mac_pak->hdr.addr2, _buffer);
+    // mSerial->printf("%s,", _buffer);
+    // make_addr(mac_pak->hdr.addr3, _buffer);
+    // mSerial->printf("%s\n", _buffer);
 }
 
 void sniff_out_parsed(void* buf, wifi_promiscuous_pkt_type_t type){
@@ -240,7 +280,7 @@ void sniff_out_parsed(void* buf, wifi_promiscuous_pkt_type_t type){
 }
 
 
-uint8_t _ph2_target_mac[6] = {0xaa, 0xaa, 0xbb, 0xbb, 0xcc, 0xcc};
+uint8_t _ph2_target_mac[6] = {0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa};
 void sniff_out_ph2_getAddr(void* buf, wifi_promiscuous_pkt_type_t type){
     char _buffer[256];
     wifi_promiscuous_pkt_t* prom_pak = (wifi_promiscuous_pkt_t*) buf;
@@ -252,36 +292,14 @@ void sniff_out_ph2_getAddr(void* buf, wifi_promiscuous_pkt_type_t type){
     if(addr_cmp(_ph2_target_mac, mac_pak->hdr.addr1)){
         sniff_disp_base_info(type_info, subtype_info, header, mac_pak);
     }else{
-        // mSerial->print("not fit\t");
-
-        // mSerial->printf("%s\t", _TYPES[type_info]);
-
-        // switch (type_info){
-        // case TYPE_MGMT:
-        //     mSerial->printf("%s", _MGMT_SUBTYPES[subtype_info]);
-        //     break;
-        // case TYPE_CTRL:
-        //     mSerial->printf("%s", _CTRL_SUBTYPES[subtype_info]);
-        //     break;
-        // case TYPE_DATA:
-        //     mSerial->printf("%s", _DATA_SUBTYPES[subtype_info]);
-        //     break;
-        // case TYPE_MISC:
-        //     mSerial->printf("MISC");
-        //     break;
-        // default:
-        //     mSerial->printf("ERR");
-        //     break;
-        // }
-
-        // make_addr(mac_pak->hdr.addr1, _buffer);
-        // mSerial->printf("%s,", _buffer);
-        // make_addr(mac_pak->hdr.addr2, _buffer);
-        // mSerial->printf("%s,", _buffer);
-        // make_addr(mac_pak->hdr.addr3, _buffer);
-        // mSerial->printf("%s\n", _buffer);
+        sniff_disp_base_info(type_info, subtype_info, header, mac_pak);
     }
 }
+
+void set_ph2_tar(uint8_t mac[6]){
+    memcpy(_ph2_target_mac, mac, 6);
+}
+
 
 uint8_t _ph3_target_mac[6] = {0xaa, 0xaa, 0xbb, 0xbb, 0xcc, 0xcc};
 uint8_t _ph3_atk_mac[6] = {0xaa, 0xaa, 0xbb, 0xbb, 0xcc, 0xcc};
@@ -291,14 +309,22 @@ void sniff_out_ph3_getTof(void* buf, wifi_promiscuous_pkt_type_t type){
     wifi_captured_packet_t* mac_pak = (wifi_captured_packet_t*)prom_pak->payload;
     uint8_t type_info = (mac_pak->hdr.frame_ctrl >> 2) & 0x00000003;
     uint8_t subtype_info = (mac_pak->hdr.frame_ctrl >> 4) & 0x0000000f;
-    if(addr_cmp(_ph3_atk_mac, mac_pak->hdr.addr1)){
-        // 如果目标地址是我们的的攻击者，则是受害者
-        mSerial->println("\nVictim");
-        sniff_disp_base_info(type_info, subtype_info, header, mac_pak);
-    }else if(addr_cmp(_ph3_atk_mac, mac_pak->hdr.addr2)){
-        // 如果源地址是我们的攻击者，那么这个包来自攻击者
-        mSerial->println("\nAttack");
-        sniff_disp_base_info(type_info, subtype_info, header, mac_pak);
+    if (type_info == TYPE_CTRL && subtype_info == SUBTYPE_CTRL_ACK){
+        if(addr_cmp(_ph3_atk_mac, mac_pak->hdr.addr1)){
+            // 如果目标地址是我们的的攻击者，则是受害者
+            mSerial->print("\nVictim,");
+            sniff_disp_base_info_ack(type_info, subtype_info, header, mac_pak);
+        }
+    }else{
+        if(addr_cmp(_ph3_atk_mac, mac_pak->hdr.addr1)){
+            // 如果目标地址是我们的的攻击者，则是受害者
+            mSerial->println("\nVictim");
+            sniff_disp_base_info(type_info, subtype_info, header, mac_pak);
+        }else if(addr_cmp(_ph3_atk_mac, mac_pak->hdr.addr2)){
+            // 如果源地址是我们的攻击者，那么这个包来自攻击者
+            mSerial->println("\nAttack");
+            sniff_disp_base_info(type_info, subtype_info, header, mac_pak);
+        }
     }
 }
 
@@ -345,7 +371,7 @@ void serialPacket(uint32_t time_sec, uint32_t time_usec, uint32_t len, uint8_t* 
     serialout_32bit(incl_len);
     serialout_32bit(orig_len);
     mSerial->write(payload_buf, incl_len);
-    mSerial->println();
+    // mSerial->println();
 }
 
 //convert 32 bit input to 4 bytes output to serial port

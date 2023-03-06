@@ -3,6 +3,7 @@
 #include <esp_wifi.h>
 #include <WiFi.h>
 #include <freertos/FreeRTOS.h>
+#include "nvs_flash.h"
 
 
 #define SRCADDR_OFFSET 10
@@ -19,17 +20,19 @@ class beacon_faker{
         uint8_t beacon_buffer[MAX_BEACON_LEN];
         int total_offset=0;
 
-        uint8_t _src_address[6];
-        uint8_t _BSSID[6];
-        uint8_t _TIM_bit_map[2];
+        uint8_t _src_address[6] = {0xaa, 0xaa, 0xbb, 0xbb, 0xcc, 0xcc};
+        uint8_t _BSSID[6] = {0xaa, 0xaa, 0xbb, 0xbb, 0xcc, 0xcc};
+        uint8_t _TIM_bit_map[2] = {0xff, 0xff};
 
         HardwareSerial* mSerial;
 
     public:
-        void set_faker_srcAddr();
+        void setup(HardwareSerial* _Serial);
+        void set_faker_srcAddr(uint8_t mac[6]);
         void send_basic_beacon();
         void send_imitate_beacon(uint8_t source_addr[6], uint8_t *TIM_bit_map, int map_len);
         void attack_target_null(uint8_t mmac[6]);
+        void attack_beacon_wake(uint8_t source_addr[6]);
 };
 
 struct beacon_TIM_template{
