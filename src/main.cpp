@@ -1,17 +1,26 @@
 #include "predefined.h"
 
-AP_server m_server;
-beacon_faker m_faker;
-STA_sniffer m_sniffer;
-
 // uint8_t fake_addr = "10:10:81:6e:1a:08";
 
 // #define COMPLE_TYPE_SERVER
 // #define COMPLE_TYPE_SNIFF
-#define COMPLE_TYPE_PH2_SNIFF
+// #define COMPLE_TYPE_PH2_SNIFF
 // #define COMPLE_TYPE_PH3_SNIFF
-// #define COMPLE_TYPE_PH2_ATK
+#define COMPLE_TYPE_PH2_ATK
 // #define COMPLE_TYPE_PH3_ATK
+
+
+#ifdef COMPLE_TYPE_SERVER
+AP_server m_server;
+#endif
+
+#if defined(COMPLE_TYPE_PH2_ATK) || defined(COMPLE_TYPE_PH3_ATK)
+beacon_faker m_faker;
+#endif
+
+#if defined(COMPLE_TYPE_SNIFF) || defined(COMPLE_TYPE_PH2_SNIFF) || defined(COMPLE_TYPE_PH3_SNIFF)
+STA_sniffer m_sniffer;
+#endif
 
 
 void setup() {
@@ -24,7 +33,7 @@ void setup() {
   lit_light(Serial);
 
   #ifdef COMPLE_TYPE_SERVER
-  setup_m_sniffer_ph3_getTof(m_sniffer);
+  setup_m_server(m_server);
   #endif
 
   #ifdef COMPLE_TYPE_SNIFF
@@ -55,14 +64,16 @@ void loop() {
   #endif
 
   #ifdef COMPLE_TYPE_PH2_ATK
-  faker_loop_wake(m_faker);
+  faker_loop_wakingup(m_faker);
   #endif
 
   #ifdef COMPLE_TYPE_PH3_ATK
-  faker_loop(m_faker);
+  faker_loop_call4ack(m_faker);
   #endif
 
+  #if defined(COMPLE_TYPE_SNIFF) || defined(COMPLE_TYPE_PH2_SNIFF) || defined(COMPLE_TYPE_PH3_SNIFF)
   // if your wifi is hopping enable this.
-  // m_sniffer.sniffer_loop();
+  m_sniffer.sniffer_loop();
+  #endif
 }
 

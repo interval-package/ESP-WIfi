@@ -1,7 +1,7 @@
 #include "AP_server.h"
 
 AP_server::AP_server(int port){
-  local_IP    = IPAddress(192,168,101,1);
+  local_IP    = IPAddress(192,168,1,1);
   gateway_IP  = IPAddress(192,168,137,1);
   subnet      = IPAddress(255,255,255,0);
   server      = WiFiServer(80);

@@ -281,6 +281,11 @@ void sniff_out_parsed(void* buf, wifi_promiscuous_pkt_type_t type){
 
 
 uint8_t _ph2_target_mac[6] = {0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa};
+
+void set_ph2_tar(uint8_t mac[6]){
+    memcpy(_ph2_target_mac, mac, 6);
+}
+
 void sniff_out_ph2_getAddr(void* buf, wifi_promiscuous_pkt_type_t type){
     char _buffer[256];
     wifi_promiscuous_pkt_t* prom_pak = (wifi_promiscuous_pkt_t*) buf;
@@ -291,18 +296,30 @@ void sniff_out_ph2_getAddr(void* buf, wifi_promiscuous_pkt_type_t type){
 
     if(addr_cmp(_ph2_target_mac, mac_pak->hdr.addr1)){
         sniff_disp_base_info(type_info, subtype_info, header, mac_pak);
-    }else{
+
+    }else if(addr_cmp(_ph2_target_mac, mac_pak->hdr.addr2)){
         sniff_disp_base_info(type_info, subtype_info, header, mac_pak);
+
+    }
+    // else if(addr_cmp(_ph2_target_mac, mac_pak->hdr.addr3)){
+    //     sniff_disp_base_info(type_info, subtype_info, header, mac_pak);
+
+    // }
+    else {
+        // mSerial->println("not");
+        // sniff_disp_base_info(type_info, subtype_info, header, mac_pak);
     }
 }
 
-void set_ph2_tar(uint8_t mac[6]){
-    memcpy(_ph2_target_mac, mac, 6);
-}
 
 
 uint8_t _ph3_target_mac[6] = {0xaa, 0xaa, 0xbb, 0xbb, 0xcc, 0xcc};
 uint8_t _ph3_atk_mac[6] = {0xaa, 0xaa, 0xbb, 0xbb, 0xcc, 0xcc};
+
+void set_ph3_tar(uint8_t mac[6]){
+    memcpy(_ph3_atk_mac, mac, 6);
+}
+
 void sniff_out_ph3_getTof(void* buf, wifi_promiscuous_pkt_type_t type){
     wifi_promiscuous_pkt_t* prom_pak = (wifi_promiscuous_pkt_t*) buf;
     wifi_pkt_rx_ctrl_t header = (wifi_pkt_rx_ctrl_t)prom_pak->rx_ctrl;
@@ -312,18 +329,23 @@ void sniff_out_ph3_getTof(void* buf, wifi_promiscuous_pkt_type_t type){
     if (type_info == TYPE_CTRL && subtype_info == SUBTYPE_CTRL_ACK){
         if(addr_cmp(_ph3_atk_mac, mac_pak->hdr.addr1)){
             // 如果目标地址是我们的的攻击者，则是受害者
-            mSerial->print("\nVictim,");
+            mSerial->print("Victim,");
             sniff_disp_base_info_ack(type_info, subtype_info, header, mac_pak);
+        }else{
+            // mSerial->print("Unknown,");
+            // sniff_disp_base_info_ack(type_info, subtype_info, header, mac_pak);
         }
     }else{
-        if(addr_cmp(_ph3_atk_mac, mac_pak->hdr.addr1)){
-            // 如果目标地址是我们的的攻击者，则是受害者
-            mSerial->println("\nVictim");
+        // if(addr_cmp(_ph3_atk_mac, mac_pak->hdr.addr1)){
+        //     mSerial->print("Attack,");
+        //     sniff_disp_base_info(type_info, subtype_info, header, mac_pak);
+        // }else 
+        if(addr_cmp(_ph3_atk_mac, mac_pak->hdr.addr2)){
+            mSerial->print("Attack,");
             sniff_disp_base_info(type_info, subtype_info, header, mac_pak);
-        }else if(addr_cmp(_ph3_atk_mac, mac_pak->hdr.addr2)){
-            // 如果源地址是我们的攻击者，那么这个包来自攻击者
-            mSerial->println("\nAttack");
-            sniff_disp_base_info(type_info, subtype_info, header, mac_pak);
+        } else{
+            // mSerial->print("Unknown,");
+            // sniff_disp_base_info(type_info, subtype_info, header, mac_pak);
         }
     }
 }

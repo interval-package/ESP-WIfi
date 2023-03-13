@@ -27,7 +27,7 @@ class AP_server{
         IPAddress gateway_IP;
         IPAddress subnet;
         uint8_t mmac[6] = {
-            0xaa, 0xaa, 0xbb, 0xbb, 0xcc, 0xcc
+            0xaa, 0xaa, 0xaa, 0xaa, 0xcc, 0xcc
         };
 
         // IPAddress local_IP(192,168,101,1);

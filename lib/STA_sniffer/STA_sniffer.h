@@ -45,6 +45,7 @@ void sniff_out(void* buf, wifi_promiscuous_pkt_type_t type);
 void sniff_out_parsed(void* buf, wifi_promiscuous_pkt_type_t type);
 void sniff_out_ph2_getAddr(void* buf, wifi_promiscuous_pkt_type_t type);
 void set_ph2_tar(uint8_t mac[6]);
+void set_ph3_tar(uint8_t mac[6]);
 void sniff_out_ph3_getTof(void* buf, wifi_promiscuous_pkt_type_t type);
 
 class STA_sniffer{
