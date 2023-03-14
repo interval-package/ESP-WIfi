@@ -116,7 +116,7 @@ void STA_sniffer::sniffer_start_wifi(){
 
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
     ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));  
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));  
     ESP_ERROR_CHECK(esp_wifi_start());
 }
 

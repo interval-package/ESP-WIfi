@@ -17,22 +17,39 @@
 
 class beacon_faker{
     private:
+        const char* AP_BASE_SSID = "<UNREGISTERED>";
+        const char* ATK_SSID_FAKE = "<TEST, NOT CONNECT>";
         uint8_t beacon_buffer[MAX_BEACON_LEN];
         int total_offset=0;
 
+        /* 似乎是无法避免的，我们的WiFi只要被开启，就会发出 */
         uint8_t _src_address[6] = {0xaa, 0xaa, 0xbb, 0xbb, 0xcc, 0xcc};
+        uint8_t _tar_address[6] = {0xaa, 0xaa, 0xbb, 0xbb, 0xcc, 0xcc};
         uint8_t _BSSID[6] = {0xaa, 0xaa, 0xbb, 0xbb, 0xcc, 0xcc};
         uint8_t _TIM_bit_map[2] = {0xff, 0xff};
 
         HardwareSerial* mSerial;
+
+        uint16_t seqn=0;
+
+        wifi_interface_t my_if = WIFI_IF_AP;
 
     public:
         void setup(HardwareSerial* _Serial);
         void set_faker_srcAddr(uint8_t mac[6]);
         void send_basic_beacon();
         void send_imitate_beacon(uint8_t source_addr[6], uint8_t *TIM_bit_map, int map_len);
+
+        /* This would be broadcasting. */
+        void send_ssid_beacon(const char *ssid_info, uint16_t& seqnum);
         void attack_target_null(uint8_t mmac[6]);
         void attack_beacon_wake(uint8_t source_addr[6]);
+
+        /* 
+            init the obj with the target AP addr
+            this API only sending broadcast;
+         */
+        void attack_beacon_wake_modi_new();
 };
 
 struct beacon_TIM_template{

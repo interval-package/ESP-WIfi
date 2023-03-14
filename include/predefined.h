@@ -41,7 +41,7 @@ uint8_t TPLINK_STA_Addrs[][6] = {
   // {0xdc, 0xa6, 0x32, 0xf9, 0xcf, 0xb7},
   // {0xf8, 0xff, 0xc2, 0xa8, 0x81, 0xd6},
   // {0x06, 0x05, 0x88, 0x2f, 0xb6, 0x4d},
-  // {0x10, 0x10, 0x81, 0x6e, 0x1a, 0x08}, // 只有这一台是会回应的
+  {0x10, 0x10, 0x81, 0x6e, 0x1a, 0x08}, // 只有这一台是会回应的
   // {0x40, 0x22, 0xd8, 0x3c, 0xc1, 0x81},
   // {0xd4, 0x25, 0x8b, 0x70, 0xad, 0xe1},
   // {0x01, 0x00, 0x52, 0x7f, 0xff, 0xfa},
@@ -81,17 +81,19 @@ void url_make_header(HardwareSerial& _Serial){
 }
 
 void setup_m_sniffer(STA_sniffer& m_sniffer){
-    uint32_t ft_base, ft_ctrl;
-    ft_base = WIFI_PROMIS_FILTER_MASK_DATA|WIFI_PROMIS_FILTER_MASK_MGMT;
-    ft_ctrl = WIFI_PROMIS_CTRL_FILTER_MASK_ACK|WIFI_PROMIS_CTRL_FILTER_MASK_ALL;
-    m_sniffer.sniffer_setup(Serial, sniff_out);
-    m_sniffer.set_filter(ft_base, ft_ctrl);
+
+  // esp_wifi_get_mac(AP)
+  uint32_t ft_base, ft_ctrl;
+  ft_base = WIFI_PROMIS_FILTER_MASK_DATA|WIFI_PROMIS_FILTER_MASK_MGMT|WIFI_PROMIS_FILTER_MASK_CTRL;
+  ft_ctrl = WIFI_PROMIS_CTRL_FILTER_MASK_ACK;
+  m_sniffer.sniffer_setup(Serial, sniff_out);
+  m_sniffer.set_filter(ft_base, ft_ctrl);
 }
 
 void setup_m_sniffer_ph2_getAddr(STA_sniffer& m_sniffer){
     uint32_t ft_base, ft_ctrl;
     ft_base = WIFI_PROMIS_FILTER_MASK_DATA;
-    ft_ctrl = WIFI_PROMIS_CTRL_FILTER_MASK_ACK|WIFI_PROMIS_FILTER_MASK_ALL;
+    ft_ctrl = WIFI_PROMIS_CTRL_FILTER_MASK_ACK;
     set_ph2_tar(TPLINK_AP_Addrs[0]);
     m_sniffer.sniffer_setup(Serial, sniff_out_ph2_getAddr);
     m_sniffer.set_filter(ft_base, ft_ctrl);
@@ -100,8 +102,8 @@ void setup_m_sniffer_ph2_getAddr(STA_sniffer& m_sniffer){
 void setup_m_sniffer_ph3_getTof(STA_sniffer& m_sniffer){
     uint32_t ft_base, ft_ctrl;
     set_ph3_tar(_fake);
-    ft_base = WIFI_PROMIS_FILTER_MASK_DATA|WIFI_PROMIS_FILTER_MASK_CTRL|WIFI_PROMIS_FILTER_MASK_FCSFAIL|WIFI_PROMIS_FILTER_MASK_MISC|WIFI_PROMIS_FILTER_MASK_ALL;
-    ft_ctrl = WIFI_PROMIS_CTRL_FILTER_MASK_ACK|WIFI_PROMIS_CTRL_FILTER_MASK_ALL;
+    ft_base = WIFI_PROMIS_FILTER_MASK_DATA|WIFI_PROMIS_FILTER_MASK_CTRL;
+    ft_ctrl = WIFI_PROMIS_CTRL_FILTER_MASK_ACK;
     m_sniffer.sniffer_setup(Serial, sniff_out_ph3_getTof);
     m_sniffer.set_filter(ft_base, ft_ctrl);
 };
@@ -135,15 +137,18 @@ void setup_m_faker(beacon_faker& m_faker){
   m_faker.setup(&Serial);
 }
 
+uint16_t seqn;
 void faker_loop_wakingup(beacon_faker& m_faker){
   // 发送伪造beacon唤醒设备
-    delay(500);
+    delay(50);
     // m_faker.attack_beacon_wake(_broadcast);
     m_faker.send_basic_beacon();
+    // m_faker.send_ssid_beacon("<BEACON SENDER>", seqn);
+    // m_faker.attack_beacon_wake_modi_new();
     // delay(100);
     Serial.println("sending beacon to call up devs to send null.");
     lit_light(Serial);
-    delay(500);
+    delay(50);
     unlit_light(Serial);
 }
 
@@ -153,13 +158,13 @@ void faker_loop_call4ack(beacon_faker& m_faker){
     for (size_t i = 0; i < STA_ADDR_NUM; i++)
     {
       unlit_light(Serial);
-      delay(500);
+      delay(50);
       cur = TPLINK_STA_Addrs[i];
       m_faker.attack_target_null(cur);
       Serial.printf("Send null, atk the %d sta: %02x:%02x:%02x:%02x:%02x:%02x\n", i, 
       *(cur), *(cur+1), *(cur+2), *(cur+3), *(cur+4), *(cur+5));
       lit_light(Serial);
-      delay(500);
+      delay(50);
     }
 
     // unlit_light(Serial);

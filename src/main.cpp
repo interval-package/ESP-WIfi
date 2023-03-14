@@ -6,15 +6,17 @@
 // #define COMPLE_TYPE_SNIFF
 // #define COMPLE_TYPE_PH2_SNIFF
 // #define COMPLE_TYPE_PH3_SNIFF
-#define COMPLE_TYPE_PH2_ATK
+// #define COMPLE_TYPE_PH2_ATK
 // #define COMPLE_TYPE_PH3_ATK
+
+#define COMPLE_TYPE_PH_C23_ATK
 
 
 #ifdef COMPLE_TYPE_SERVER
 AP_server m_server;
 #endif
 
-#if defined(COMPLE_TYPE_PH2_ATK) || defined(COMPLE_TYPE_PH3_ATK)
+#if defined(COMPLE_TYPE_PH2_ATK) || defined(COMPLE_TYPE_PH3_ATK) ||defined(COMPLE_TYPE_PH_C23_ATK)
 beacon_faker m_faker;
 #endif
 
@@ -48,7 +50,7 @@ void setup() {
   setup_m_sniffer_ph3_getTof(m_sniffer);
   #endif
 
-  #ifdef COMPLE_TYPE_PH2_ATK
+  #if defined(COMPLE_TYPE_PH2_ATK) || defined(COMPLE_TYPE_PH_C23_ATK)
   setup_m_faker_beacon_wake(m_faker);
   #endif
 
@@ -57,17 +59,20 @@ void setup() {
   #endif
 }
 
+void task_wakingup();
+void task_call4ack();
+
 void loop() {
 
   #ifdef COMPLE_TYPE_SERVER
   m_server.Listen(Serial);
   #endif
 
-  #ifdef COMPLE_TYPE_PH2_ATK
+  #if defined(COMPLE_TYPE_PH2_ATK)||defined(COMPLE_TYPE_PH_C23_ATK)
   faker_loop_wakingup(m_faker);
   #endif
 
-  #ifdef COMPLE_TYPE_PH3_ATK
+  #if defined(COMPLE_TYPE_PH3_ATK)||defined(COMPLE_TYPE_PH_C23_ATK)
   faker_loop_call4ack(m_faker);
   #endif
 
